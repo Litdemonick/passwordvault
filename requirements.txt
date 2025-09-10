@@ -1,0 +1,10 @@
+# --- Core ---
+sqlalchemy>=2.0.0
+cryptography>=42.0.0
+
+# --- UI ---
+ttkbootstrap>=1.10.1
+tkinterdnd2; platform_system == "Windows"
+
+# --- Empaquetado / utilidades ---
+pyinstaller>=6.0
