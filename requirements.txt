@@ -1,6 +1,7 @@
 # --- Core ---
 sqlalchemy>=2.0.0
 cryptography>=42.0.0
+python-dotenv>=1.0.0
 
 # --- UI ---
 ttkbootstrap>=1.10.1
@@ -12,3 +13,4 @@ importlib-metadata>=6.0; python_version < "3.10"
 
 # --- Empaquetado / desarrollo ---
 pyinstaller>=6.0
+
