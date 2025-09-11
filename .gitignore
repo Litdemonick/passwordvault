@@ -31,4 +31,4 @@ Thumbs.db
 .idea/
 
 # IGNORAS CARPETAS EN CUALQUIER NIVEL
-**//
+tests/
