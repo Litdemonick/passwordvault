@@ -1,0 +1,24 @@
+# Entorno virtual
+.venv/
+env/
+
+# Configuración y contraseñas sensibles
+.env
+.env.password
+.vault_ui
+vault
+
+# Archivos de compilación
+*.spec
+build/
+dist/
+
+# Cachés de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
