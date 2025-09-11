@@ -6,7 +6,7 @@ env/
 .env
 .env.password
 .vault_ui
-vault
+vault.db
 
 # Archivos de compilación
 *.spec
@@ -22,3 +22,10 @@ __pycache__/
 # Archivos de sistema
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
+
+# Configuración de IDEs
+.vscode/
+.idea/
