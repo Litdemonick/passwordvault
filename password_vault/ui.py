@@ -1,14 +1,10 @@
-# password_vault/ui.py
 import os
 from pathlib import Path
 import configparser
 import ttkbootstrap as tb
+from .constants import APP_NAME, APP_VERSION
 
-# --- Nombre y versión de la app ---
-APP_NAME = "PasswordVault"
-APP_VERSION = "v1.0.0.0"
-
-# --- Configuración de tema (persistente en archivo .ini) ---
+# --- Configuración de tema ---
 def _user_config_dir() -> Path:
     base = os.environ.get("LOCALAPPDATA") or os.environ.get("APPDATA") or str(Path.home())
     p = Path(base) / APP_NAME
@@ -45,11 +41,7 @@ def save_theme(theme: str) -> None:
     except Exception:
         pass
 
-# --- Helpers de estilo ---
 def apply_style(window, theme=None):
-    """
-    Aplica el estilo ttkbootstrap al root window.
-    """
     theme = theme or load_saved_theme()
     style = tb.Style(theme)
     return style

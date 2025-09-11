@@ -1,85 +1,108 @@
 # password_vault/login.py
-import os
-import tkinter as tk
+from PIL import Image, ImageTk
 import ttkbootstrap as tb
-from sqlalchemy.orm import Session
+import tkinter as tk
+from pathlib import Path
+from .constants import APP_NAME, APP_VERSION
 
-from .db import SessionLocal, Setting
-from .crypto import derive_key, verify_master, make_verifier
+
+# --- al inicio del archivo login.py ---
+import ctypes
+from sys import platform
+
+def set_dark_titlebar(window):
+    if platform == "win32":
+        try:
+            hwnd = ctypes.windll.user32.GetParent(window.winfo_id())
+            DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+            ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                hwnd,
+                DWMWA_USE_IMMERSIVE_DARK_MODE,
+                ctypes.byref(ctypes.c_int(1)),
+                ctypes.sizeof(ctypes.c_int(1))
+            )
+        except Exception as e:
+            print("⚠️ No se pudo aplicar dark titlebar:", e)
 
 
-class LoginWindow:
-    def __init__(self, master, on_success):
-        """
-        Ventana de login.
-        - master: root window (Tk o tb.Window)
-        - on_success: callback que recibe la derived_key cuando se valida
-        """
-        self.master = master
-        self.on_success = on_success
 
-        self.setting = None
-        with SessionLocal() as s:
-            self.setting = s.query(Setting).first()
-        self.first_run = self.setting is None
+class LoginWindow(tb.Frame):
+    def __init__(self, master, on_login=None):
+        super().__init__(master)
+        self.pack(fill="both", expand=True)
 
-        # Widgets
-        Frame = tb.Frame
-        Label = tb.Label
-        EntryW = tb.Entry
-        Button = tb.Button
-        StrVar = tb.StringVar
+        self.on_login = on_login or (lambda u, p: None)
 
-        self.wrap = Frame(master, padding=30)
-        self.wrap.pack(fill="both", expand=True)
+        # --- Configuración de la ventana ---
+        master.geometry("1200x720")
+        master.minsize(1000, 600)
+        master.title(f"{APP_NAME} {APP_VERSION}")
 
-        Label(self.wrap, text="🔐 PasswordVault", font=("Segoe UI", 18, "bold")).pack(pady=(0, 12))
+        # 🔥 Aplica dark titlebar justo aquí
+        set_dark_titlebar(master)
 
-        self.var_pwd = StrVar()
-        self.e_pwd = EntryW(self.wrap, textvariable=self.var_pwd, show="*", width=40)
-        self.e_pwd.pack(pady=6)
+        # === Fondo ===
+        bg_path = Path(__file__).parent / "assets" / "fondo.png"
+        if bg_path.exists():
+            self.bg_img_orig = Image.open(bg_path)
+            self.bg_img = ImageTk.PhotoImage(self.bg_img_orig)
 
-        if self.first_run:
-            Label(self.wrap, text="Confirmar contraseña:").pack()
-            self.var_pwd2 = StrVar()
-            self.e_pwd2 = EntryW(self.wrap, textvariable=self.var_pwd2, show="*", width=40)
-            self.e_pwd2.pack(pady=6)
+            self.bg_label = tk.Label(
+                self, image=self.bg_img,
+                borderwidth=0, highlightthickness=0
+            )
+            # ⬇️ Aquí dejamos márgenes de 2% en cada lado
+            self.bg_label.place(relx=0.02, rely=0.02,
+                                relwidth=0.96, relheight=0.96)
+
+            # Escalar fondo cuando se cambia el tamaño
+            self.bind("<Configure>", self._resize_bg)
         else:
-            self.var_pwd2 = None
+            self.config(style="primary.TFrame")
 
-        self.var_msg = StrVar()
-        Label(self.wrap, textvariable=self.var_msg, foreground="#d33").pack()
+        # === Card centrado (formulario de login) ===
+        card = tb.Frame(self, padding=30, bootstyle="secondary")
+        card.place(relx=0.5, rely=0.5, anchor="center")
 
-        Button(self.wrap, text="Aceptar", bootstyle="primary", command=self._accept).pack(pady=8)
-        Button(self.wrap, text="Salir", command=self.master.destroy).pack()
+        tb.Label(
+            card,
+            text="Iniciar sesión",
+            font=("Segoe UI", 16, "bold")
+        ).pack(pady=10)
 
-        self.e_pwd.focus_set()
+        self.var_user = tb.StringVar()
+        self.var_pwd = tb.StringVar()
 
-    def _accept(self):
-        p1 = self.var_pwd.get().strip()
-        if not p1:
-            self.var_msg.set("La contraseña no puede estar vacía.")
+        tb.Entry(card, textvariable=self.var_user,
+                 width=30).pack(pady=6)
+        tb.Entry(card, textvariable=self.var_pwd,
+                 show="*", width=30).pack(pady=6)
+
+        tb.Button(
+            card,
+            text="Entrar",
+            bootstyle="success",
+            command=self._do_login
+        ).pack(pady=10)
+
+    # --- Escalar el fondo ---
+    def _resize_bg(self, event):
+        if hasattr(self, "bg_img_orig") and event.width > 0 and event.height > 0:
+            # ajustamos al 96% del tamaño actual
+            w = int(event.width * 0.96)
+            h = int(event.height * 0.96)
+            resized = self.bg_img_orig.resize((w, h), Image.LANCZOS)
+            self.bg_img = ImageTk.PhotoImage(resized)
+            self.bg_label.config(image=self.bg_img)
+            self.bg_label.image = self.bg_img
+
+    # --- Acción de login ---
+    def _do_login(self):
+        user = self.var_user.get().strip()
+        pwd = self.var_pwd.get().strip()
+        if not user or not pwd:
+            tb.dialogs.Messagebox.show_error(
+                "Usuario y contraseña requeridos", "Error"
+            )
             return
-
-        if self.first_run:
-            p2 = self.var_pwd2.get().strip()
-            if p1 != p2:
-                self.var_msg.set("Las contraseñas no coinciden.")
-                return
-            # Guardamos master
-            salt = os.urandom(16)
-            key = derive_key(p1, salt)
-            verifier = make_verifier(key)
-            with SessionLocal() as s:
-                s.add(Setting(kdf_salt=salt, verifier=verifier))
-                s.commit()
-            self.on_success(key)
-            self.wrap.destroy()
-        else:
-            st = self.setting
-            key = derive_key(p1, st.kdf_salt)
-            if not verify_master(key, st.verifier):
-                self.var_msg.set("Contraseña incorrecta.")
-                return
-            self.on_success(key)
-            self.wrap.destroy()
+        self.on_login(user, pwd)

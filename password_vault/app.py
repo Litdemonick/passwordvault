@@ -22,6 +22,9 @@ from .crypto import (
 )
 
 
+
+
+
 # --- Persistencia del tema en %LOCALAPPDATA%\PasswordVault\vault_ui.ini ---
 APP_NAME = "PasswordVault"
 APP_VERSION = "1.0.0.0"
@@ -1178,6 +1181,7 @@ def main():
         PasswordVaultApp(root, derived_key, start_theme=start_theme)
 
     # Se inicializa el login (si es la primera vez pedirá crear master password)
-    LoginWindow(root, on_success=_continue_app)
+    LoginWindow(root, on_login=_continue_app)
+
 
     root.mainloop()
