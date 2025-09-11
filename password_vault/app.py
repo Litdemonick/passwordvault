@@ -3,6 +3,7 @@ import re
 import string
 import secrets
 import configparser
+from .login import LoginWindow
 from pathlib import Path
 from typing import Optional
 
@@ -1169,14 +1170,14 @@ def main():
     root.minsize(1000, 600)   # No se puede hacer más pequeña que esto
     # root.maxsize(1920, 1080)  # (Opcional) Si quieres un límite máximo
 
-
-    # Gate embebido (una sola ventana)
-    gate = MasterGate(root)
+    # 👇 Ahora usamos LoginWindow en vez de MasterGate
+    from .login import LoginWindow
 
     def _continue_app(derived_key: bytes):
-        gate.destroy()
+        # Cuando login es correcto → lanzar la app principal
         PasswordVaultApp(root, derived_key, start_theme=start_theme)
 
-    gate.set_on_unlock(_continue_app)
+    # Se inicializa el login (si es la primera vez pedirá crear master password)
+    LoginWindow(root, on_success=_continue_app)
 
     root.mainloop()
