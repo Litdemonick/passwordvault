@@ -1,8 +1,0 @@
-application name: PasswordVault
-application versión: 1.0.0.0
-application Publisher: 	Litdemonick
-Applicatioon website: https://github.com/Litdemonick/passwordvault
-applicaction destination base folder: C:\Program Files\PasswordVault\
-application folder name: PasswordVault
-archivos file: .pmvault
-Compiler output base file name: PasswordVaultSetup
