@@ -344,29 +344,34 @@ class PasswordVaultApp:
         self.style = (tb.Style() if USE_BOOTSTRAP else ttk.Style())
         self.current_theme = start_theme
 
-        # ====== Construcción de UI (AHORA SÍ se muestra) ======
+        # ====== Construcción de UI (AHORA RESPONSIVA) ======
         Frame = (tb.Frame if USE_BOOTSTRAP else ttk.Frame)
 
         self.app = Frame(self.root, padding=0)
         self.app.pack(fill="both", expand=True)
 
-        # Layout principal: sidebar (izq) + contenido (der)
+        # Layout principal con grid (sidebar + contenido)
         main = Frame(self.app, padding=0)
         main.pack(fill="both", expand=True)
 
+        main.grid_rowconfigure(0, weight=1)     # fila expansible
+        main.grid_columnconfigure(0, weight=0)  # sidebar fijo
+        main.grid_columnconfigure(1, weight=1)  # contenido expansible
+
         sidebar = self._build_sidebar(main)
-        sidebar.pack(side="left", fill="y")
+        sidebar.grid(row=0, column=0, sticky="ns")  # ocupa alto completo
 
         content = self._build_content(main)
-        content.pack(side="right", fill="both", expand=True)
+        content.grid(row=0, column=1, sticky="nsew")  # se expande
 
         # Suscripción a eventos (después de construir la UI)
         vault_events.entry_changed.connect(self._on_entry_changed)
 
         # Carga inicial de la tabla
         self.refresh_table()
-        self.set_status("Listo")
+        self.set_status("Bienvenido a PasswordVault")
         # =======================================================
+
 
     # === Helpers de tema / Treeview (DENTRO de la clase) ===
     def _is_dark(self) -> bool:
@@ -560,13 +565,16 @@ class PasswordVaultApp:
         Button = (tb.Button if USE_BOOTSTRAP else ttk.Button)
         Label  = (tb.Label if USE_BOOTSTRAP else ttk.Label)
         EntryW = (tb.Entry if USE_BOOTSTRAP else ttk.Entry)
-        TextW  = (tb.Text if USE_BOOTSTRAP else tk.Text)   # 🔹 Faltaba esto
+        TextW  = (tb.Text if USE_BOOTSTRAP else tk.Text)
         Tree   = (tb.Treeview if USE_BOOTSTRAP else ttk.Treeview)
 
         cont = Frame(parent, padding=0)
+        cont.grid_rowconfigure(2, weight=1)     # la tabla se expande
+        cont.grid_columnconfigure(0, weight=1)
 
+        # --- Header ---
         header = Frame(cont, padding=(12, 12))
-        header.pack(fill="x")
+        header.grid(row=0, column=0, sticky="ew")
         self.header = header
 
         (tb.Label if USE_BOOTSTRAP else tk.Label)(
@@ -587,7 +595,6 @@ class PasswordVaultApp:
             command=self.add_entry
         ).pack(side="left")
 
-        # === Botón de tema en el header (junto al buscador y "+ New") ===
         if USE_BOOTSTRAP:
             self.btn_theme = tb.Button(
                 right,
@@ -597,10 +604,10 @@ class PasswordVaultApp:
             )
             self.btn_theme.pack(side="left", padx=(8, 0))
             self._update_theme_button_text()
-        # =================================================================
 
+        # --- Toolbar ---
         toolbar = Frame(cont, padding=(12, 0))
-        toolbar.pack(fill="x")
+        toolbar.grid(row=1, column=0, sticky="ew")
 
         Button(toolbar, text="Editar",
             **({"bootstyle": INFO} if USE_BOOTSTRAP else {}),
@@ -618,15 +625,26 @@ class PasswordVaultApp:
             **({"bootstyle": SECONDARY} if USE_BOOTSTRAP else {}),
             command=self.import_vault).pack(side="left", padx=4, pady=6)
 
+        # --- Tabla + scrollbars ---
         table_wrap = Frame(cont, padding=(12, 8))
-        table_wrap.pack(fill="both", expand=True)
+        table_wrap.grid(row=2, column=0, sticky="nsew")
+        table_wrap.grid_rowconfigure(0, weight=1)
+        table_wrap.grid_columnconfigure(0, weight=1)
 
         self.tree = Tree(
             table_wrap,
             columns=("id", "Name", "Usuario", "Correo", "URL", "Updated"),
             show="headings"
         )
-        self.tree.pack(fill="both", expand=True)
+        self.tree.grid(row=0, column=0, sticky="nsew")
+
+        y_scroll = ttk.Scrollbar(table_wrap, orient="vertical", command=self.tree.yview)
+        y_scroll.grid(row=0, column=1, sticky="ns")
+        self.tree.configure(yscrollcommand=y_scroll.set)
+
+        x_scroll = ttk.Scrollbar(table_wrap, orient="horizontal", command=self.tree.xview)
+        x_scroll.grid(row=1, column=0, sticky="ew")
+        self.tree.configure(xscrollcommand=x_scroll.set)
 
         # 🔒 Evita que se puedan mover las columnas con el ratón
         def _block_column_drag(event):
@@ -641,7 +659,7 @@ class PasswordVaultApp:
         self.context_menu.add_command(label="🗑️ Mover a papelera", command=self.delete_entry)
         self.context_menu.add_command(label="♻️ Restaurar", command=self.restore_entry)
 
-        # Configuración de columnas mejorada (bloqueo y alineación)
+        # Configuración de columnas
         columns_cfg = [
             ("id", 50, "center"),
             ("Name", 260, "w"),
@@ -653,12 +671,12 @@ class PasswordVaultApp:
 
         for col, w, align in columns_cfg:
             self.tree.heading(col, text=col, anchor="center")
-            self.tree.column(col, width=w, anchor=align, stretch=False)  # 🔹 ancho fijo
+            self.tree.column(col, width=w, anchor=align, stretch=False)
 
-            # ⬇️ AQUÍ VA EL PASO 1: reserva del panel
+            # Panel oculto de edición
             self.edit_panel = Frame(cont, padding=(12, 12))
-            self.edit_panel.pack(fill="x")
-            self.edit_panel.pack_forget()  # oculto al inicio
+            self.edit_panel.grid(row=3, column=0, sticky="ew")
+            self.edit_panel.grid_remove()
 
             Label(self.edit_panel, text="Título").grid(row=0, column=0, sticky="w")
             self.e_title = EntryW(self.edit_panel, width=46)
@@ -684,7 +702,6 @@ class PasswordVaultApp:
             self.t_notes = TextW(self.edit_panel, width=46, height=6)
             self.t_notes.grid(row=5, column=1, sticky="ew", padx=6)
 
-            # Botones
             btns = Frame(self.edit_panel)
             btns.grid(row=6, column=0, columnspan=2, pady=(8, 0))
 
@@ -692,12 +709,12 @@ class PasswordVaultApp:
                 **({"bootstyle": SUCCESS} if USE_BOOTSTRAP else {})).pack(side="left", padx=4)
             Button(btns, text="Cancelar", command=self._hide_edit_panel).pack(side="left", padx=4)
 
-
-        # 🔹 Forzar que el ancho total no se deforme ni se reordene
+        # 🔹 Fijar columnas visibles
         self.tree["displaycolumns"] = ("id", "Name", "Usuario", "Correo", "URL", "Updated")
 
+        # --- Status bar ---
         status = Frame(cont, padding=(12, 8))
-        status.pack(fill="x")
+        status.grid(row=4, column=0, sticky="ew")
         self.status_label = (tb.Label if USE_BOOTSTRAP else ttk.Label)(
             status, text="Listo", anchor="w"
         )
@@ -705,6 +722,7 @@ class PasswordVaultApp:
 
         self._apply_treeview_style()
         return cont
+
 
 
     
@@ -1146,6 +1164,11 @@ def main():
 
     root.title(f"{APP_NAME} v{APP_VERSION}")
     root.geometry("1200x720")
+
+    # ✅ Límites de tamaño
+    root.minsize(1000, 600)   # No se puede hacer más pequeña que esto
+    # root.maxsize(1920, 1080)  # (Opcional) Si quieres un límite máximo
+
 
     # Gate embebido (una sola ventana)
     gate = MasterGate(root)
