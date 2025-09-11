@@ -23,6 +23,7 @@ from .crypto import (
 
 # --- Persistencia del tema en %LOCALAPPDATA%\PasswordVault\vault_ui.ini ---
 APP_NAME = "PasswordVault"
+APP_VERSION = "1.0.0.0"
 
 def _user_config_dir() -> Path:
     base = os.environ.get("LOCALAPPDATA") or os.environ.get("APPDATA") or str(Path.home())
@@ -530,8 +531,9 @@ class PasswordVaultApp:
 
         brand = Frame(side, padding=16); brand.pack(fill="x")
         (tb.Label if USE_BOOTSTRAP else tk.Label)(
-            brand, text="🔐 PasswordVault v1.0.0.0", font=("Segoe UI", 14, "bold")
+            brand, text=f"🔐 {APP_NAME} v{APP_VERSION}", font=("Segoe UI", 14, "bold")
         ).pack(anchor="w")
+
 
         box = Frame(side, padding=(12, 8)); box.pack(fill="both", expand=True)
 
@@ -1142,7 +1144,7 @@ def main():
     else:
         root = tk.Tk()
 
-    root.title("PasswordVault")
+    root.title(f"{APP_NAME} v{APP_VERSION}")
     root.geometry("1200x720")
 
     # Gate embebido (una sola ventana)
